@@ -165,8 +165,18 @@ def run_full_logic(con, exp, win_tile, streak, dealer_p, is_zm, win_on_dealer, f
 
     if any(TILE_INFO[c]['type'] == 'h' for c in con): 
         return False, "相公", ["手牌區不可含花牌"], None
-    if len(hand_only) < 17: 
-        return False, "相公", [f"牌型不滿足胡台條件，最少需17張牌 (目前{len(hand_only)}張)"], None
+    
+    # === 新增：16張牌的聽牌判斷邏輯 ===
+    if len(hand_only) == 16:
+        waiting_list = get_waiting_tiles(hand_only)
+        if waiting_list:
+            waiting_icons = " ".join([f"{TILE_INFO[t]['icon']}{TILE_INFO[t]['name']}" for t in waiting_list])
+            return False, "聽牌", [f"🔥 **恭喜聽牌！** 你可以胡的牌有：\n\n### {waiting_icons}"], None
+        else:
+            return False, "未聽牌", ["🤔 目前 16 張牌，但尚未聽牌。請檢查牌型或更換手牌！"], None
+    elif len(hand_only) < 16: 
+        return False, "相公", [f"牌型數量錯誤，需為 16 張(聽牌) 或 17 張(胡牌)，目前 {len(hand_only)} 張"], None
+    # ==================================
     
     all_counts = collections.Counter(hand_only)
     hu_ok, best_sets, win_is_eye = False, [], False
@@ -435,7 +445,7 @@ def render_main_ui():
             st.session_state.win_tile = all_codes[0] if all_codes else '1w'
             
         win_info = TILE_INFO.get(st.session_state.win_tile, {'icon':'?', 'name':'未知'})
-        st.write(f"#### 目前胡牌張：{win_info['name']}")    
+        st.write(f"#### 目前胡牌張：{win_info['name']}")   
         col1, col2 = st.columns([1, 1])
         with col1: st.button(win_info['icon'], key="win_now", use_container_width=True)
         with col2:
@@ -517,10 +527,9 @@ def render_main_ui():
         streak, dealer, is_zm, win_on_dealer, flower_mode, dice_val, m_list, base_t, wind_r
     )
     
-    # 修正：根據是否相公，決定顯示樣式與內容
+    # === 修正：根據是否相公、聽牌，決定顯示樣式與內容 ===
     if res_tai == "相公":
         bg, txt = "#f8d7da", "#721c24"
-        # 相公時，不顯示任何後綴
         html_content = f'''
         <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
             <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
@@ -531,9 +540,32 @@ def render_main_ui():
             </div>
         </div>
         '''
+    elif res_tai == "聽牌":
+        bg, txt = "#cce5ff", "#004085"
+        html_content = f'''
+        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <div class="result-label">👀 聽牌分析</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="tai-number" style="font-size: 2.8rem;">聽牌中！🎯</span>
+            </div>
+        </div>
+        '''
+    elif res_tai == "未聽牌":
+        bg, txt = "#fff3cd", "#856404"
+        html_content = f'''
+        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <div class="result-label">👀 聽牌分析</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="tai-number" style="font-size: 2.8rem;">尚未聽牌🧩</span>
+            </div>
+        </div>
+        '''
     else:
         bg, txt = "#d4edda", "#155724"
-        # 胡牌時，顯示數字與「台」
         html_content = f'''
         <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
             <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
