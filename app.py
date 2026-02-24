@@ -9,35 +9,60 @@ st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 st.markdown("""
     <style>
-        /* === 完全使用你原本的麻將牌設定 === */
+        /* =========================================
+           1. 全域按鈕設定 (預設給麻將牌使用)
+           這是你指定的：大尺寸、粗框、大字體
+           ========================================= */
         .stButton > button {
-            border: 2px solid #333 !important; background-color: white !important;
-            height: 100px !important; width: 80px !important; margin: 2px !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
+            border: 2px solid #333 !important; 
+            background-color: white !important;
+            height: 100px !important; 
+            width: 80px !important; 
+            margin: 2px auto !important;
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important;
+            padding: 0 !important;
+            border-radius: 6px !important;
         }
-        .stButton > button div p { font-size: 70px !important; color: #1B1B3A !important; font-family: "Segoe UI Emoji" !important; }
         
-        /* === 針對非麻將牌的一般操作按鈕 (交換、重新分析) 進行樣式還原 === */
-        .action-btn-container .stButton > button {
-            height: auto !important; 
-            width: 100% !important;
-            background-color: #f0f2f6 !important;
-            border: 1px solid #ccc !important;
-            padding: 10px !important;
-            border-radius: 8px !important;
-            margin: 15px 0 !important;
-        }
-        .action-btn-container .stButton > button div p { 
-            font-size: 22px !important; 
-            color: #31333F !important;
-            font-family: sans-serif !important;
+        /* 麻將牌的文字 (大 Emoji) */
+        .stButton > button p { 
+            font-size: 70px !important; 
+            color: #1B1B3A !important; 
+            font-family: "Segoe UI Emoji", sans-serif !important; 
+            margin: 0 !important; 
+            line-height: 1 !important;
         }
 
-        /* === 介面排版與文字樣式 === */
+        /* =========================================
+           2. 正常功能按鈕的「特效藥」 (重新分析、交換手牌)
+           使用 .normal-button 包裹，強制覆蓋上面的設定
+           ========================================= */
+        .normal-button .stButton > button {
+            width: 100% !important;        /* 寬度填滿 */
+            height: auto !important;       /* 高度自動 */
+            padding: 12px 20px !important; /* 舒服的內距 */
+            background-color: #f0f2f6 !important; /* 淺灰背景 */
+            border: 1px solid #ccc !important;    /* 淺灰邊框 */
+            margin: 10px 0 !important;
+        }
+        
+        /* 正常按鈕的文字 (正常大小、橫向) */
+        .normal-button .stButton > button p {
+            font-size: 20px !important;    
+            color: #333 !important;
+            font-family: sans-serif !important;
+            writing-mode: horizontal-tb !important; /* 強制橫排 */
+        }
+
+        /* =========================================
+           3. 其他介面樣式
+           ========================================= */
         .section-header { font-size: 24px; font-weight: bold; color: #1B1B3A; margin: 20px 0 10px 0; border-bottom: 3px solid #CCCCFF; padding-bottom: 5px; }
         .count-badge { background-color: #1B1B3A; color: white; padding: 4px 12px; border-radius: 12px; font-size: 18px; margin-left: 10px; vertical-align: middle; }
         
-        /* --- 結果顯示區樣式 --- */
+        /* 結果顯示區 */
         .result-box {
             padding: 30px;
             border-radius: 15px;
@@ -45,56 +70,22 @@ st.markdown("""
             margin-top: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .result-title {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            opacity: 0.9;
-        }
-        .result-content {
-            font-size: 40px; 
-            font-weight: 800;
-            line-height: 1.4;
-        }
+        .result-title { font-size: 32px; font-weight: bold; margin-bottom: 20px; opacity: 0.9; }
+        .result-content { font-size: 40px; font-weight: 800; line-height: 1.4; }
         
-        /* 聽牌列表的圖示樣式 */
-        .waiting-tiles-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
+        /* 聽牌列表圖示 */
+        .waiting-tiles-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; }
         .waiting-tile {
-            background-color: #fff;
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 60px; /* 超大麻將圖示 */
-            line-height: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: #fff; border: 2px solid #333; border-radius: 8px;
+            padding: 10px 20px; font-size: 60px; line-height: 1;
+            display: flex; flex-direction: column; align-items: center;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
         }
-        .waiting-name {
-            font-size: 20px;
-            font-weight: normal;
-            margin-top: 5px;
-            color: #555;
-        }
+        .waiting-name { font-size: 20px; font-weight: normal; margin-top: 5px; color: #555; }
         
-        /* 錯誤訊息樣式 */
-        .error-msg {
-            font-size: 28px;
-            font-weight: bold;
-            color: #721c24;
-        }
-        .hint-msg {
-            font-size: 20px;
-            color: #666;
-            margin-top: 10px;
-        }
+        /* 錯誤訊息 */
+        .error-msg { font-size: 28px; font-weight: bold; color: #721c24; }
+        .hint-msg { font-size: 20px; color: #666; margin-top: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -270,7 +261,7 @@ def render_main_ui():
     st.write(f"**🐹 手牌 (Concealed)：**")
     codes = st.session_state.con_manual
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
-    cols = st.columns(11)
+    cols = st.columns(11) # 放在 column 內的按鈕會被套用大麻將牌樣式
     for i, idx in enumerate(s_idx):
         with cols[i % 11]:
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"h_{i}"):
@@ -285,8 +276,8 @@ def render_main_ui():
                 if st.button(v['icon'], key=f"add_h_{k}"):
                     st.session_state.con_manual.append(k); st.rerun()
 
-    # 使用 action-btn-container 裝交換按鈕
-    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+    # ★ 這裡使用 .normal-button 來包裝，強制套用縮小樣式
+    st.markdown('<div class="normal-button">', unsafe_allow_html=True)
     if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用"):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
         st.rerun()
@@ -356,8 +347,8 @@ def render_main_ui():
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-    # 使用 action-btn-container 裝重新分析按鈕
-    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+    # ★ 這裡使用 .normal-button 來包裝，強制套用縮小樣式
+    st.markdown('<div class="normal-button">', unsafe_allow_html=True)
     if st.button("🔄 重新分析", key="refresh_all"):
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
