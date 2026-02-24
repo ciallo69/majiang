@@ -9,81 +9,52 @@ st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 st.markdown("""
     <style>
-        /* =========================================
-           1. 全域按鈕設定 (預設給麻將牌使用)
-           這是你指定的：大尺寸、粗框、大字體
-           ========================================= */
-        div[data-testid="column"] .stButton > button {
+        /* === 1. 你最愛的原版麻將牌樣式 (一字不漏完全還原) === */
+        .stButton > button {
             border: 2px solid #333 !important; 
             background-color: white !important;
             height: 100px !important; 
             width: 80px !important; 
-            margin: 2px auto !important;
+            margin: 2px !important;
             display: flex !important; 
             align-items: center !important; 
             justify-content: center !important;
-            padding: 0 !important;
-            border-radius: 6px !important;
+            border-radius: 8px !important;
         }
-        
-        /* 麻將牌的文字 (大 Emoji) */
-        .stButton > button p { 
+        .stButton > button div p { 
             font-size: 70px !important; 
             color: #1B1B3A !important; 
-            font-family: "Segoe UI Emoji", sans-serif !important; 
-            margin: 0 !important; 
-            line-height: 1 !important;
+            font-family: "Segoe UI Emoji" !important; 
         }
 
-        /* =========================================
-           2. 正常功能按鈕的「特效藥」 (重新分析、交換手牌)
-           使用 .normal-button 包裹，強制覆蓋上面的設定
-           ========================================= */
-        .normal-button .stButton > button {
-            width: 100% !important;        /* 寬度填滿 */
-            height: auto !important;       /* 高度自動 */
-            padding: 12px 20px !important; /* 舒服的內距 */
-            background-color: #f0f2f6 !important; /* 淺灰背景 */
-            border: 1px solid #ccc !important;    /* 淺灰邊框 */
-            margin: 10px 0 !important;
+        /* === 2. 專屬特效藥：只針對 type="primary" 的按鈕進行縮小還原 === */
+        /* (這只會影響設定了 type="primary" 的「重新分析」與「交換」按鈕) */
+        .stButton > button[kind="primary"] {
+            height: auto !important; 
+            width: 100% !important;
+            padding: 10px !important;
+            background-color: #f0f2f6 !important;
+            border: 1px solid #ccc !important;
+            border-radius: 8px !important;
         }
-        
-        /* 正常按鈕的文字 (正常大小、橫向) */
-        .normal-button .stButton > button p {
-            font-size: 20px !important;    
-            color: #333 !important;
+        .stButton > button[kind="primary"] div p { 
+            font-size: 22px !important; 
+            color: #31333F !important;
             font-family: sans-serif !important;
-            writing-mode: horizontal-tb !important; /* 強制橫排 */
         }
 
-        /* =========================================
-           3. 其他介面樣式
-           ========================================= */
+        /* === 3. 其他介面排版與文字樣式 === */
         .section-header { font-size: 24px; font-weight: bold; color: #1B1B3A; margin: 20px 0 10px 0; border-bottom: 3px solid #CCCCFF; padding-bottom: 5px; }
         .count-badge { background-color: #1B1B3A; color: white; padding: 4px 12px; border-radius: 12px; font-size: 18px; margin-left: 10px; vertical-align: middle; }
         
-        /* 結果顯示區 */
-        .result-box {
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin-top: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        .result-box { padding: 30px; border-radius: 15px; text-align: center; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .result-title { font-size: 32px; font-weight: bold; margin-bottom: 20px; opacity: 0.9; }
         .result-content { font-size: 40px; font-weight: 800; line-height: 1.4; }
         
-        /* 聽牌列表圖示 */
         .waiting-tiles-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; }
-        .waiting-tile {
-            background-color: #fff; border: 2px solid #333; border-radius: 8px;
-            padding: 10px 20px; font-size: 60px; line-height: 1;
-            display: flex; flex-direction: column; align-items: center;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        }
+        .waiting-tile { background-color: #fff; border: 2px solid #333; border-radius: 8px; padding: 10px 20px; font-size: 60px; line-height: 1; display: flex; flex-direction: column; align-items: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
         .waiting-name { font-size: 20px; font-weight: normal; margin-top: 5px; color: #555; }
         
-        /* 錯誤訊息 */
         .error-msg { font-size: 28px; font-weight: bold; color: #721c24; }
         .hint-msg { font-size: 20px; color: #666; margin-top: 10px; }
     </style>
@@ -130,18 +101,14 @@ TILE_INFO = {
 
 # --- 2. 演算法邏輯 ---
 def recursive_decompose(counts, sets_needed, win_tile, current_sets=[]):
-    if sum(counts.values()) == 0:
-        return (sets_needed == 0), current_sets
+    if sum(counts.values()) == 0: return (sets_needed == 0), current_sets
     if sets_needed <= 0: return False, []
-    
     tile = next(k for k, v in sorted(counts.items(), key=lambda x: TILE_INFO[x[0]]['w']) if v > 0)
-    
     for take in [4, 3]:
         if counts[tile] >= take:
             temp = counts.copy(); temp[tile] -= take
             ok, res = recursive_decompose(temp, sets_needed - 1, win_tile, current_sets + [(f'set_{take}', tile)])
             if ok: return True, res
-            
     info = TILE_INFO[tile]
     if info['type'] in ['w', 'D', 's'] and info.get('val', 0) <= 7:
         t2 = next((k for k,v in TILE_INFO.items() if v.get('type')==info['type'] and v.get('val')==info['val']+1), None)
@@ -169,19 +136,14 @@ def get_waiting_tiles(hand_codes):
     counts = collections.Counter(hand_codes)
     waiting = []
     all_tiles = [k for k,v in TILE_INFO.items() if v['type'] != 'h']
-    
     for t in all_tiles:
-        temp = counts.copy()
-        temp[t] += 1
-        if check_hu_for_waiting(temp):
-            waiting.append(t)
-            
+        temp = counts.copy(); temp[t] += 1
+        if check_hu_for_waiting(temp): waiting.append(t)
     return waiting
 
 # --- 3. 核心處理函數 ---
 def analyze_waiting_status(con, exp):
     hand_only = [c for c in con if TILE_INFO[c]['type'] != 'h']
-    
     total_counts = collections.Counter(con + exp)
     for code, count in total_counts.items():
         info = TILE_INFO[code]
@@ -195,22 +157,17 @@ def analyze_waiting_status(con, exp):
         return "error", f"手牌數量為 {hand_len} 張。<br>這是已經胡牌或未打牌的數量，請移除一張牌以計算聽牌。", []
     
     waiting_list = get_waiting_tiles(hand_only)
-    
-    if waiting_list:
-        return "waiting", "聽牌中！", waiting_list
-    else:
-        return "not_waiting", "尚未聽牌", []
+    if waiting_list: return "waiting", "聽牌中！", waiting_list
+    else: return "not_waiting", "尚未聽牌", []
 
 
 # --- 4. 影像偵測 ---
 def process_detection(image_obj, source_type, current_model_name):
     img_id_base = getattr(image_obj, 'name', 'camera') if source_type == 'upload' else 'camera_shot'
     cache_key = (img_id_base, current_model_name)
-    
     if 'current_cache_key' not in st.session_state or st.session_state.current_cache_key != cache_key:
         st.session_state.current_cache_key = cache_key
         st.session_state.current_image = image_obj
-        
         results = model(image_obj)
         st.session_state.current_plot = results[0].plot()
         
@@ -222,26 +179,18 @@ def process_detection(image_obj, source_type, current_model_name):
                     try:
                         if hasattr(source, 'xywhr'): box = source.xywhr[i].cpu().numpy()
                         else: box = source.xywh[i].cpu().numpy()
-                        
-                        tile_data.append({
-                            'code': model.names[int(c)], 
-                            'x': float(box[0]), 
-                            'y': float(box[1])
-                        })
+                        tile_data.append({'code': model.names[int(c)], 'x': float(box[0]), 'y': float(box[1])})
                     except: continue 
 
         if not tile_data:
             st.warning("未偵測到任何麻將牌")
-            st.session_state.con_manual = []
-            st.session_state.exp_manual = []
+            st.session_state.con_manual, st.session_state.exp_manual = [], []
             return
 
         sorted_y = sorted(tile_data, key=lambda x: x['y'])
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
-        
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else 9999
-        
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
         st.session_state.exp_manual = [d['code'] for d in tile_data if d['y'] < threshold]
 
@@ -261,7 +210,7 @@ def render_main_ui():
     st.write(f"**🐹 手牌 (Concealed)：**")
     codes = st.session_state.con_manual
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
-    cols = st.columns(11) # 放在 column 內的按鈕會被套用大麻將牌樣式
+    cols = st.columns(11)
     for i, idx in enumerate(s_idx):
         with cols[i % 11]:
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"h_{i}"):
@@ -276,12 +225,12 @@ def render_main_ui():
                 if st.button(v['icon'], key=f"add_h_{k}"):
                     st.session_state.con_manual.append(k); st.rerun()
 
-    # ★ 這裡使用 .normal-button 來包裝，強制套用縮小樣式
-    st.markdown('<div class="normal-button">', unsafe_allow_html=True)
-    if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用"):
+    st.write("")
+    # ★ 關鍵：加上 type="primary"，觸發我們上面寫的縮小 CSS
+    if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用", use_container_width=True, type="primary"):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.write("")
 
     # 2. 門前牌區
     st.write(f"**🐥 門前牌 (Exposed)：**")
@@ -347,11 +296,10 @@ def render_main_ui():
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-    # ★ 這裡使用 .normal-button 來包裝，強制套用縮小樣式
-    st.markdown('<div class="normal-button">', unsafe_allow_html=True)
-    if st.button("🔄 重新分析", key="refresh_all"):
+    st.write("")
+    # ★ 關鍵：加上 type="primary"，觸發我們上面寫的縮小 CSS
+    if st.button("🔄 重新分析", key="refresh_all", use_container_width=True, type="primary"):
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 啟動入口 ---
 t1, t2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
@@ -363,4 +311,3 @@ with t2:
     if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
-
