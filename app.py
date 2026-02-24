@@ -190,7 +190,10 @@ def process_detection(image_obj, source_type, current_model_name):
         sorted_y = sorted(tile_data, key=lambda x: x['y'])
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
-        threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else 9999
+        
+        # ★ 修改處：如果只有一排，切分線設為 -1，讓所有牌預設進入「手牌」區
+        threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else -1
+        
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
         st.session_state.exp_manual = [d['code'] for d in tile_data if d['y'] < threshold]
 
@@ -226,7 +229,6 @@ def render_main_ui():
                     st.session_state.con_manual.append(k); st.rerun()
 
     st.write("")
-    # ★ 關鍵：加上 type="primary"，觸發我們上面寫的縮小 CSS
     if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用", use_container_width=True, type="primary"):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
         st.rerun()
@@ -297,7 +299,6 @@ def render_main_ui():
         st.markdown(html_content, unsafe_allow_html=True)
 
     st.write("")
-    # ★ 關鍵：加上 type="primary"，觸發我們上面寫的縮小 CSS
     if st.button("🔄 重新分析", key="refresh_all", use_container_width=True, type="primary"):
         st.rerun()
 
