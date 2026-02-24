@@ -9,24 +9,40 @@ st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 st.markdown("""
     <style>
-        /* 針對在 column 內的按鈕 (專門給麻將牌使用) 套用麻將外觀 */
-        div[data-testid="column"] .stButton > button {
-            border: 2px solid #333 !important; background-color: white !important;
-            height: 85px !important; width: 65px !important; margin: 1px !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
+        /* =========================================
+           1. 麻將牌按鈕專屬樣式 (強制放大並加上黑框)
+           使用 div[data-testid="column"] 確保只影響排列在欄位中的麻將牌
+           ========================================= */
+        div[data-testid="column"] button {
+            border: 2px solid #333 !important; 
+            background-color: white !important;
+            height: 100px !important; 
+            width: 80px !important; 
+            margin: 2px auto !important;
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important;
             padding: 0 !important;
-        }
-        div[data-testid="column"] .stButton > button div p { 
-            font-size: 50px !important; color: #1B1B3A !important; font-family: "Segoe UI Emoji" !important; margin: 0 !important; 
+            border-radius: 6px !important;
         }
         
-        /* 區塊標題 */
+        div[data-testid="column"] button p { 
+            font-size: 70px !important; 
+            color: #1B1B3A !important; 
+            font-family: "Segoe UI Emoji", sans-serif !important; 
+            margin: 0 !important; 
+            line-height: 1 !important;
+        }
+
+        /* =========================================
+           2. 介面排版與其他文字樣式
+           ========================================= */
         .section-header { font-size: 24px; font-weight: bold; color: #1B1B3A; margin: 20px 0 10px 0; border-bottom: 3px solid #CCCCFF; padding-bottom: 5px; }
         .count-badge { background-color: #1B1B3A; color: white; padding: 4px 12px; border-radius: 12px; font-size: 18px; margin-left: 10px; vertical-align: middle; }
         
-        /* 一般功能按鈕加大 (交換手牌、重新分析等) */
-        .stButton > button {
-            font-size: 20px !important;
+        /* 一般功能按鈕字體稍微加大 (交換手牌、重新分析) */
+        div.stButton > button p {
+            font-size: 22px !important;
         }
 
         /* --- 結果顯示區樣式 --- */
@@ -248,12 +264,10 @@ def process_detection(image_obj, source_type, current_model_name):
 
 # --- 5. UI 渲染主程式 ---
 def render_main_ui():
-    # ★ 修正三：如果還沒上傳或拍照產生 current_plot，直接停止渲染 UI
     if 'current_plot' not in st.session_state:
         st.info("☝️ 請先從上方上傳照片或使用相機拍照，AI 將自動辨識手牌。")
         return
     
-    # 顯示 AI 辨識圖片
     st.image(st.session_state.current_plot, caption=f"AI 辨識結果", use_container_width=True)
 
     # --- 牌面管理區域 ---
@@ -264,7 +278,7 @@ def render_main_ui():
     st.write(f"**🐹 手牌 (Concealed)：**")
     codes = st.session_state.con_manual
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
-    cols = st.columns(11) # 放在 column 內的按鈕會被套用麻將牌樣式
+    cols = st.columns(11) # 放在 column 內的按鈕會被套用大麻將牌樣式
     for i, idx in enumerate(s_idx):
         with cols[i % 11]:
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"h_{i}"):
@@ -279,7 +293,6 @@ def render_main_ui():
                 if st.button(v['icon'], key=f"add_h_{k}"):
                     st.session_state.con_manual.append(k); st.rerun()
 
-    # 這裡的按鈕沒有放在 column 內，所以會維持 Streamlit 預設的大按鈕比例
     st.write("")
     if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用", use_container_width=True):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
@@ -316,7 +329,6 @@ def render_main_ui():
         for tile_code in data:
             icon_html += f'<div class="waiting-tile"><div>{TILE_INFO[tile_code]["icon"]}</div><div class="waiting-name">{TILE_INFO[tile_code]["name"]}</div></div>'
             
-        # ★ 修正一：移除左側所有縮排，避免 Streamlit 將其判斷為 Markdown 的程式碼區塊
         html_content = f"""
 <div class="result-box" style="background-color: {bg_color}; color: {text_color};">
     <div class="result-title">👀 聽牌分析</div>
@@ -351,7 +363,6 @@ def render_main_ui():
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-    # ★ 修正二：按鈕維持滿版寬度，不套用麻將牌的直立 CSS
     st.write("")
     if st.button("🔄 重新分析", key="refresh_all", use_container_width=True):
         st.rerun()
