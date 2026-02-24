@@ -13,7 +13,7 @@ st.markdown("""
            1. 全域按鈕設定 (預設給麻將牌使用)
            這是你指定的：大尺寸、粗框、大字體
            ========================================= */
-        .stButton > button {
+        div[data-testid="column"] .stButton > button {
             border: 2px solid #333 !important; 
             background-color: white !important;
             height: 100px !important; 
@@ -363,3 +363,4 @@ with t2:
     if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
+
