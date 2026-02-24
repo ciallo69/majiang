@@ -9,42 +9,34 @@ st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 st.markdown("""
     <style>
-        /* =========================================
-           1. 麻將牌按鈕專屬樣式 (強制放大並加上黑框)
-           使用 div[data-testid="column"] 確保只影響排列在欄位中的麻將牌
-           ========================================= */
-        div[data-testid="column"] button {
-            border: 2px solid #333 !important; 
-            background-color: white !important;
-            height: 100px !important; 
-            width: 80px !important; 
-            margin: 2px auto !important;
-            display: flex !important; 
-            align-items: center !important; 
-            justify-content: center !important;
-            padding: 0 !important;
-            border-radius: 6px !important;
+        /* === 完全使用你原本的麻將牌設定 === */
+        .stButton > button {
+            border: 2px solid #333 !important; background-color: white !important;
+            height: 100px !important; width: 80px !important; margin: 2px !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
         }
+        .stButton > button div p { font-size: 70px !important; color: #1B1B3A !important; font-family: "Segoe UI Emoji" !important; }
         
-        div[data-testid="column"] button p { 
-            font-size: 70px !important; 
-            color: #1B1B3A !important; 
-            font-family: "Segoe UI Emoji", sans-serif !important; 
-            margin: 0 !important; 
-            line-height: 1 !important;
+        /* === 針對非麻將牌的一般操作按鈕 (交換、重新分析) 進行樣式還原 === */
+        .action-btn-container .stButton > button {
+            height: auto !important; 
+            width: 100% !important;
+            background-color: #f0f2f6 !important;
+            border: 1px solid #ccc !important;
+            padding: 10px !important;
+            border-radius: 8px !important;
+            margin: 15px 0 !important;
+        }
+        .action-btn-container .stButton > button div p { 
+            font-size: 22px !important; 
+            color: #31333F !important;
+            font-family: sans-serif !important;
         }
 
-        /* =========================================
-           2. 介面排版與其他文字樣式
-           ========================================= */
+        /* === 介面排版與文字樣式 === */
         .section-header { font-size: 24px; font-weight: bold; color: #1B1B3A; margin: 20px 0 10px 0; border-bottom: 3px solid #CCCCFF; padding-bottom: 5px; }
         .count-badge { background-color: #1B1B3A; color: white; padding: 4px 12px; border-radius: 12px; font-size: 18px; margin-left: 10px; vertical-align: middle; }
         
-        /* 一般功能按鈕字體稍微加大 (交換手牌、重新分析) */
-        div.stButton > button p {
-            font-size: 22px !important;
-        }
-
         /* --- 結果顯示區樣式 --- */
         .result-box {
             padding: 30px;
@@ -278,7 +270,7 @@ def render_main_ui():
     st.write(f"**🐹 手牌 (Concealed)：**")
     codes = st.session_state.con_manual
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
-    cols = st.columns(11) # 放在 column 內的按鈕會被套用大麻將牌樣式
+    cols = st.columns(11)
     for i, idx in enumerate(s_idx):
         with cols[i % 11]:
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"h_{i}"):
@@ -293,11 +285,12 @@ def render_main_ui():
                 if st.button(v['icon'], key=f"add_h_{k}"):
                     st.session_state.con_manual.append(k); st.rerun()
 
-    st.write("")
-    if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用", use_container_width=True):
+    # 使用 action-btn-container 裝交換按鈕
+    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+    if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用"):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
         st.rerun()
-    st.write("")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. 門前牌區
     st.write(f"**🐥 門前牌 (Exposed)：**")
@@ -363,9 +356,11 @@ def render_main_ui():
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-    st.write("")
-    if st.button("🔄 重新分析", key="refresh_all", use_container_width=True):
+    # 使用 action-btn-container 裝重新分析按鈕
+    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+    if st.button("🔄 重新分析", key="refresh_all"):
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 啟動入口 ---
 t1, t2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
