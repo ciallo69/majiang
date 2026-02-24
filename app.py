@@ -5,73 +5,107 @@ import collections
 import numpy as np
 
 # --- 0. 介面設定 ---
-st.set_page_config(page_title="AI智慧麻將算台", layout="centered")
+st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 st.markdown("""
     <style>
+        /* 按鈕樣式 (麻將牌按鈕) */
         .stButton > button {
             border: 2px solid #333 !important; background-color: white !important;
-            height: 100px !important; width: 80px !important; margin: 2px !important;
+            height: 90px !important; width: 70px !important; margin: 1px !important;
             display: flex !important; align-items: center !important; justify-content: center !important;
+            padding: 0 !important;
         }
-        .stButton > button div p { font-size: 70px !important; color: #1B1B3A !important; font-family: "Segoe UI Emoji" !important; }
-        .win-tile-box { 
-            background-color: #FFF9E6; 
-            padding: 15px; 
-            border-radius: 12px; 
-            text-align: center; 
-            margin-bottom: 20px; 
-        }
-        .section-header { font-size: 22px; font-weight: bold; color: #1B1B3A; margin: 25px 0 10px 0; border-bottom: 3px solid #CCCCFF; }
-        .count-badge { background-color: #1B1B3A; color: white; padding: 2px 10px; border-radius: 10px; font-size: 16px; margin-left: 10px; }
-        .result-label { font-size: 20px; font-weight: bold; margin-bottom: 5px; opacity: 0.8; }
-        .wind-info { background-color: #e2e6ea; padding: 10px; border-radius: 8px; font-size: 14px; color: #555; margin-bottom: 15px; text-align: center;}
+        .stButton > button div p { font-size: 55px !important; color: #1B1B3A !important; font-family: "Segoe UI Emoji" !important; margin: 0 !important; }
         
-        /* 統一數字與文字的樣式 */
-        .tai-number {
-            font-size: 3.5rem; 
-            font-weight: 800;
-            line-height: 1.2;
-            font-family: sans-serif;
-            margin-right: 5px;
-        }
-        .tai-text {
-            font-size: 3.5rem; 
-            font-weight: 800;
-            line-height: 1.2;
-            font-family: sans-serif;
-        }
+        /* 區塊標題 */
+        .section-header { font-size: 24px; font-weight: bold; color: #1B1B3A; margin: 20px 0 10px 0; border-bottom: 3px solid #CCCCFF; padding-bottom: 5px; }
+        .count-badge { background-color: #1B1B3A; color: white; padding: 4px 12px; border-radius: 12px; font-size: 18px; margin-left: 10px; vertical-align: middle; }
         
-        /* 交換按鈕樣式 */
-        .swap-btn-container { text-align: center; margin: 10px 0; }
+        /* 交換按鈕 */
+        .swap-btn-container { text-align: center; margin: 15px 0; }
         .swap-btn-container button {
-            height: 40px !important; width: 250px !important;
-            font-size: 18px !important;
+            height: 50px !important; width: 100% !important;
+            font-size: 20px !important;
             background-color: #f0f2f6 !important;
             border: 1px solid #ccc !important;
         }
         
-        /* 刷新按鈕 */
-        .refresh-btn {
-            font-size: 24px !important;
-            padding: 0px 10px !important;
-            height: auto !important;
+        /* --- 結果顯示區樣式 (加大字體) --- */
+        .result-box {
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .result-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .result-content {
+            font-size: 40px; /* 加大文字 */
+            font-weight: 800;
+            line-height: 1.4;
+        }
+        
+        /* 聽牌列表的圖示樣式 */
+        .waiting-tiles-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .waiting-tile {
+            background-color: #fff;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 60px; /* 超大麻將圖示 */
+            line-height: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .waiting-name {
+            font-size: 20px;
+            font-weight: normal;
+            margin-top: 5px;
+            color: #555;
+        }
+        
+        /* 錯誤訊息樣式 */
+        .error-msg {
+            font-size: 28px;
+            font-weight: bold;
+            color: #721c24;
+        }
+        .hint-msg {
+            font-size: 20px;
+            color: #666;
+            margin-top: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🀄️ 麻將自動算台")
+st.title("🀄️ 麻將聽牌小幫手")
 
 # --- 1. 設定與定義 ---
-st.sidebar.title("⚙️ 核心設定")
-model_choice = st.sidebar.selectbox("辨識模型", ("yolov8s(2).pt", "yolov8n(2).pt", "YOLOv8s_obb.pt", "YOLOv8n_obb.pt"))
-flower_mode = st.sidebar.radio("花牌玩法", ["莊家花 (莊家為東)", "開門花 (骰子開門處為東)"])
-dice_val = st.sidebar.number_input("骰子點數", min_value=3, max_value=18, value=7) if flower_mode == "開門花 (骰子開門處為東)" else 0
+# 隱藏側邊欄設定，只保留模型選擇 (預設即可)
+with st.sidebar:
+    st.title("⚙️ 系統設定")
+    model_choice = st.selectbox("辨識模型", ("yolov8s(2).pt", "yolov8n(2).pt", "YOLOv8s_obb.pt", "YOLOv8n_obb.pt"))
+    st.info("本工具僅進行聽牌分析，不計算台數。")
 
 @st.cache_resource
 def load_yolo_model(name): return YOLO(name)
 model = load_yolo_model(model_choice)
 
+# 定義麻將牌資料
 TILE_INFO = {
     '1w': {'name': '一萬', 'icon': '🀇', 'w': 1, 'type': 'w', 'val': 1}, '2w': {'name': '二萬', 'icon': '🀈', 'w': 2, 'type': 'w', 'val': 2},
     '3w': {'name': '三萬', 'icon': '🀉', 'w': 3, 'type': 'w', 'val': 3}, '4w': {'name': '四萬', 'icon': '🀊', 'w': 4, 'type': 'w', 'val': 4},
@@ -98,20 +132,25 @@ TILE_INFO = {
     '3bf': {'name': '竹', 'icon': '🀤', 'w': 57, 'type': 'h', 'suit': 'bf', 'v': 3}, '4bf': {'name': '菊', 'icon': '🀥', 'w': 58, 'type': 'h', 'suit': 'bf', 'v': 4}
 }
 
-# --- 2. 結構拆解 (遞迴) ---
+# --- 2. 演算法邏輯 ---
+
+# 遞迴拆解 (核心算法)
 def recursive_decompose(counts, sets_needed, win_tile, current_sets=[]):
     if sum(counts.values()) == 0:
         return (sets_needed == 0), current_sets
     if sets_needed <= 0: return False, []
     
+    # 找手中序號最小的一張牌開始處理
     tile = next(k for k, v in sorted(counts.items(), key=lambda x: TILE_INFO[x[0]]['w']) if v > 0)
     
-    for take in [4, 3]:
+    # 1. 嘗試組成刻子 (AAA)
+    for take in [4, 3]: # 雖然台灣麻將手牌最多4張，但通常3張成刻
         if counts[tile] >= take:
             temp = counts.copy(); temp[tile] -= take
             ok, res = recursive_decompose(temp, sets_needed - 1, win_tile, current_sets + [(f'set_{take}', tile)])
             if ok: return True, res
             
+    # 2. 嘗試組成順子 (ABC) - 字牌無法組順
     info = TILE_INFO[tile]
     if info['type'] in ['w', 'D', 's'] and info.get('val', 0) <= 7:
         t2 = next((k for k,v in TILE_INFO.items() if v.get('type')==info['type'] and v.get('val')==info['val']+1), None)
@@ -123,8 +162,9 @@ def recursive_decompose(counts, sets_needed, win_tile, current_sets=[]):
             if ok: return True, res
     return False, []
 
-# 檢查手牌是否胡牌
+# 檢查這副牌若加上某張牌是否胡牌
 def check_hu_for_waiting(counts):
+    # 嘗試將每一種牌當作「眼」(Pair)
     for eye in counts:
         if counts[eye] >= 2:
             temp = counts.copy()
@@ -132,6 +172,7 @@ def check_hu_for_waiting(counts):
             rem_tiles = sum(temp.values())
             if rem_tiles % 3 != 0: continue
             sets_needed = rem_tiles // 3
+            # 眼拿掉後，剩下的牌必須能組成 N 個面子
             ok, _ = recursive_decompose(temp, sets_needed, '1w')
             if ok: return True
     return False
@@ -140,237 +181,47 @@ def check_hu_for_waiting(counts):
 def get_waiting_tiles(hand_codes):
     counts = collections.Counter(hand_codes)
     waiting = []
+    # 遍歷所有非花牌的麻將牌
     all_tiles = [k for k,v in TILE_INFO.items() if v['type'] != 'h']
     
     for t in all_tiles:
         temp = counts.copy()
-        temp[t] += 1
+        temp[t] += 1 # 假設摸到了這張牌
         if check_hu_for_waiting(temp):
             waiting.append(t)
             
     return waiting
 
-# --- 3. 核心算台邏輯 ---
-def run_full_logic(con, exp, win_tile, streak, dealer_p, is_zm, win_on_dealer, f_mode, dice, manual_list, base_tai, wind_circle):
-    all_codes = con + exp
-    hand_only = [c for c in all_codes if TILE_INFO[c]['type'] != 'h']
-    hua_codes = [c for c in all_codes if TILE_INFO[c]['type'] == 'h']
+# --- 3. 核心處理函數 (簡化版) ---
+def analyze_waiting_status(con, exp):
+    # 過濾掉花牌，只看手牌 (不含門前)
+    hand_only = [c for c in con if TILE_INFO[c]['type'] != 'h']
     
-    total_counts = collections.Counter(all_codes)
+    # 相公檢查：單張牌超過4張
+    total_counts = collections.Counter(con + exp)
     for code, count in total_counts.items():
         info = TILE_INFO[code]
-        limit = 1 if info['type'] == 'h' else 4
-        if count > limit:
-            return False, "相公", [f"偵測到 **{info['name']}** 有 {count} 張 (上限 {limit})，請移除多餘牌張。"], None
+        if info['type'] != 'h' and count > 4:
+            return "error", f"牌數錯誤：**{info['name']}** 有 {count} 張 (上限 4)", []
 
-    if any(TILE_INFO[c]['type'] == 'h' for c in con): 
-        return False, "相公", ["手牌區不可含花牌"], None
+    # 檢查手牌數量是否符合聽牌結構 (3n + 1)
+    # 例如：1, 4, 7, 10, 13, 16 張
+    hand_len = len(hand_only)
+    if hand_len % 3 == 0:
+        return "error", f"手牌數量為 {hand_len} 張 (相公)。\n若要聽牌，手牌應為 1, 4, 7, 10, 13, 16... 張 (少一張牌的狀態)。", []
+    elif hand_len % 3 == 2:
+        return "error", f"手牌數量為 {hand_len} 張。\n這是已經胡牌或未打牌的數量，請移除一張牌以計算聽牌。", []
     
-    # === 新增：16張牌的聽牌判斷邏輯 ===
-    if len(hand_only) == 16:
-        waiting_list = get_waiting_tiles(hand_only)
-        if waiting_list:
-            waiting_icons = " ".join([f"{TILE_INFO[t]['icon']}{TILE_INFO[t]['name']}" for t in waiting_list])
-            return False, "聽牌", [f"🔥 **恭喜聽牌！** 你可以胡的牌有：\n\n### {waiting_icons}"], None
-        else:
-            return False, "未聽牌", ["🤔 目前 16 張牌，但尚未聽牌。請檢查牌型或更換手牌！"], None
-    elif len(hand_only) < 16: 
-        return False, "相公", [f"牌型數量錯誤，需為 16 張(聽牌) 或 17 張(胡牌)，目前 {len(hand_only)} 張"], None
-    # ==================================
+    # 計算聽牌
+    waiting_list = get_waiting_tiles(hand_only)
     
-    all_counts = collections.Counter(hand_only)
-    hu_ok, best_sets, win_is_eye = False, [], False
-    
-    # 胡牌結構檢查
-    for eye, count in all_counts.items():
-        if count >= 2:
-            temp = all_counts.copy(); temp[eye] -= 2
-            ok, res = recursive_decompose(temp, 5, win_tile)
-            if ok: 
-                hu_ok = True; best_sets = res; win_is_eye = (eye == win_tile); 
-                break
-
-    if not hu_ok: 
-        return False, "相公", ["結構錯誤 (無法湊成5面子+1眼)"], None
-
-    # --- 計算聽牌列表，用於嚴格判斷「獨聽」 ---
-    hand_minus_win = list(hand_only)
-    if win_tile in hand_minus_win:
-        hand_minus_win.remove(win_tile)
+    if waiting_list:
+        return "waiting", "聽牌中！", waiting_list
     else:
-        pass
-        
-    waiting_list = get_waiting_tiles(hand_minus_win)
-    is_strict_single_wait = (len(waiting_list) == 1 and waiting_list[0] == win_tile)
+        return "not_waiting", "尚未聽牌", []
 
-    # --- 算台開始 ---
-    tai, details = 0, []
-    n_counts = collections.Counter([TILE_INFO[c]['name'] for c in hand_only])
-    suits = set([TILE_INFO[c]['type'] for c in hand_only])
-    
-    if all(t == 'z' for t in suits): tai += 16; details.append("字一色 16台")
-    elif len(suits - {'z'}) == 1:
-        if 'z' in suits: tai += 4; details.append("混一色 4台")
-        else: tai += 8; details.append("清一色 8台")
 
-    d_tri = sum(1 for d in ['中','發','白'] if n_counts[d] >= 3)
-    d_pair = sum(1 for d in ['中','發','白'] if n_counts[d] == 2)
-    
-    if d_tri == 3: 
-        tai += 8; details.append("大三元 8台")
-    elif d_tri == 2 and d_pair == 1: 
-        tai += 4; details.append("小三元 4台")
-    else:
-        if n_counts['中'] >= 3: tai += 1; details.append("紅中 1台")
-        if n_counts['發'] >= 3: tai += 1; details.append("發財 1台")
-        if n_counts['白'] >= 3: tai += 1; details.append("白板 1台")
-
-    w_tri = sum(1 for w in ['東','南','西','北'] if n_counts[w] >= 3)
-    is_big_four = (w_tri == 4)
-    if is_big_four: 
-        tai += 16
-        details.append("大四喜 16台 (不加計圈風與字牌門風)")
-    elif w_tri == 3 and any(n_counts[w] == 2 for w in ['東','南','西','北']): 
-        tai += 8
-        details.append("小四喜 8台")
-
-    if all(s[0].startswith('set') for s in best_sets): tai += 4; details.append("碰碰胡 4台")
-
-    con_hand = [c for c in con if TILE_INFO[c]['type'] != 'h']
-    is_quan_qiu = (len(con_hand) == 2 and win_is_eye)
-    
-    wait_type = None
-    if is_quan_qiu:
-        pass 
-    elif is_strict_single_wait and win_is_eye:
-        wait_type = "單吊 1台"
-    else:
-        if is_strict_single_wait:
-             if not win_is_eye:
-                 for s in best_sets:
-                    if s[0] == 'seq' and s[2] != -1:
-                        v = TILE_INFO[win_tile]['val']
-                        if s[2] == 1: wait_type = "中洞 1台"
-                        elif (s[2] == 0 and v == 7) or (s[2] == 2 and v == 3): wait_type = "邊張 1台"
-             else:
-                 wait_type = "單吊 1台"
-        else:
-            pass
-
-    if wait_type: tai += 1; details.append(wait_type)
-
-    # --- 修正：暗刻判定邏輯 (基於 best_sets) ---
-    anke_count = 0
-    exposed_counts = collections.Counter(exp)
-    
-    for s in best_sets:
-        ctype = s[0]
-        if ctype in ['set_3', 'set_4']:
-            tile = s[1]
-            if exposed_counts[tile] >= 3:
-                exposed_counts[tile] -= 3 
-            else:
-                anke_count += 1
-                
-    if anke_count >= 3: 
-        tm={3:2, 4:5, 5:8}
-        tai += tm.get(anke_count, 0)
-        details.append(f"{anke_count}暗刻 {tm.get(anke_count,0)}台")
-
-    is_menqing = (len(exp) == 0)
-    
-    if is_quan_qiu: 
-        tai += 2; details.append("全求人 2台 (含單吊)")
-    elif is_menqing:
-        if is_zm and "槓上開花" not in manual_list and "海底撈月" not in manual_list:
-             tai += 3
-             details.append("門清一摸三 3台")
-        elif not is_zm:
-            tai += 1; details.append("門清 1台")
-        elif (is_zm and ("槓上開花" in manual_list or "海底撈月" in manual_list)):
-            tai += 1; details.append("門清 1台")
-
-    if len(hua_codes)==0 and not any(TILE_INFO[c]['type']=='z' for c in hand_only) and all(s[0]=='seq' for s in best_sets) and not is_menqing and not wait_type:
-        tai += 2; details.append("平胡 2台")
-
-    dealer_map_idx = {"我": 0, "下家(右)": 1, "對家(對面)": 2, "上家(左)": 3}
-    dealer_idx_rel = dealer_map_idx[dealer_p]
-    
-    if f_mode.startswith("莊家"):
-        logical_east_idx_rel = dealer_idx_rel
-        calc_note = "莊家位置"
-    else:
-        dice_offset = (dice - 1) % 4
-        logical_east_idx_rel = (dealer_idx_rel + dice_offset) % 4
-        calc_note = f"骰子{dice}點開門位置"
-
-    my_wind_idx = (4 - logical_east_idx_rel) % 4
-    wind_names = ["東", "南", "西", "北"]
-    my_wind_name = wind_names[my_wind_idx]
-    my_flower_num = my_wind_idx + 1
-    wind_debug_info = f"判斷基準：{calc_note} <br> 我的門風：<b>{my_wind_name}風</b> (對應花牌：{my_flower_num}花)"
-
-    if not is_big_four:
-        if n_counts[wind_circle] >= 3: 
-            tai += 1; details.append(f"圈風({wind_circle}風) 1台")
-        if n_counts[my_wind_name] >= 3: 
-            tai += 1; details.append(f"門風({my_wind_name}風) 1台")
-
-    if len(hua_codes) == 8: 
-        tai += 8; details.append("八仙過海 8台")
-    elif len(hua_codes) == 7: 
-        tai += 7; details.append("七搶一 7台")
-    else:
-        h_suits = collections.Counter([TILE_INFO[c]['suit'] for c in hua_codes])
-        gang_suits = [s for s, c in h_suits.items() if c == 4]
-        for g in gang_suits: 
-            tai += 2; details.append(f"花槓 ({'春夏秋冬' if g=='rf' else '梅蘭竹菊'}) 2台")
-        loose_flowers = [c for c in hua_codes if TILE_INFO[c]['suit'] not in gang_suits]
-        for c in loose_flowers:
-            if TILE_INFO[c]['v'] == my_flower_num:
-                tai += 1; details.append(f"方位花牌({TILE_INFO[c]['name']}) 1台")
-
-    tai += base_tai; details.insert(0, f"底台 {base_tai}台")
-    
-    has_streak = False
-    if dealer_p == "我": 
-        has_streak = True
-    elif is_zm: 
-        has_streak = True 
-    elif win_on_dealer:
-        has_streak = True
-        tai += 1; details.append("胡莊家 1台")
-    
-    if has_streak and streak > 0:
-        tai += (2*streak); details.append(f"連{streak}拉{streak} {2*streak}台")
-    if dealer_p == "我":
-         tai += 1; details.append("莊家 1台")
-
-    if "槓上開花" in manual_list:
-        tai += 2; details.append("槓上自摸 2台")
-    elif "海底撈月" in manual_list:
-        tai += 2; details.append("海底自摸 2台")
-    elif is_zm and not is_menqing:
-        tai += 1; details.append("自摸 1台")
-
-    manual_score_map = {
-        "天胡": 16, "搶槓": 1, "河底撈魚": 1, 
-        "咪幾": 8, "哩咕": 8, "天地人胡": 16
-    }
-    
-    for m in manual_list:
-        if m in ["槓上開花", "海底撈月"]: continue
-        pts = manual_score_map.get(m, 0)
-        if m == "天胡": pts = 16 
-        if m in ["搶槓", "河底撈魚", "咪幾", "哩咕", "天地人胡"]:
-            real_pts = pts if pts > 0 else 1
-            if m == "地人胡": real_pts = 16
-            if m in ["咪幾", "哩咕"]: real_pts = 8
-            tai += real_pts; details.append(f"{m} {real_pts}台")
-
-    return True, tai, details, wind_debug_info
-
-# --- 4. 偵測處理 ---
+# --- 4. 影像偵測 ---
 def process_detection(image_obj, source_type, current_model_name):
     img_id_base = getattr(image_obj, 'name', 'camera') if source_type == 'upload' else 'camera_shot'
     cache_key = (img_id_base, current_model_name)
@@ -384,32 +235,20 @@ def process_detection(image_obj, source_type, current_model_name):
         
         tile_data = []
         for r in results:
-            source = None
-            try:
-                if hasattr(r, 'obb') and r.obb is not None:
-                     if hasattr(r.obb, 'xywhr') or hasattr(r.obb, 'xywh'):
-                         source = r.obb
-            except Exception:
-                pass 
-            
-            if source is None:
-                source = r.boxes
-
+            source = r.obb if hasattr(r, 'obb') and r.obb is not None else r.boxes
             if source is not None:
                 for i, c in enumerate(source.cls):
                     try:
-                        if hasattr(source, 'xywhr'):
-                            box_data = source.xywhr[i].cpu().numpy()
-                        else:
-                            box_data = source.xywh[i].cpu().numpy()
+                        # 取得座標 (用來排序)
+                        if hasattr(source, 'xywhr'): box = source.xywhr[i].cpu().numpy()
+                        else: box = source.xywh[i].cpu().numpy()
                         
                         tile_data.append({
                             'code': model.names[int(c)], 
-                            'x': float(box_data[0]), 
-                            'y': float(box_data[1])
+                            'x': float(box[0]), 
+                            'y': float(box[1])
                         })
-                    except Exception as e:
-                        continue 
+                    except: continue 
 
         if not tile_data:
             st.warning("未偵測到任何麻將牌")
@@ -417,69 +256,63 @@ def process_detection(image_obj, source_type, current_model_name):
             st.session_state.exp_manual = []
             return
 
+        # 簡單的分群演算法：依 Y 軸區分 手牌 vs 門前牌
         sorted_y = sorted(tile_data, key=lambda x: x['y'])
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
+        
+        # 如果間距夠大，切成兩排；否則全部當手牌
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else 9999
         
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
         st.session_state.exp_manual = [d['code'] for d in tile_data if d['y'] < threshold]
-        
-        hand_objs = [d for d in tile_data if d['y'] >= threshold]
-        if hand_objs: st.session_state.win_tile = max(hand_objs, key=lambda d: d['x'])['code']
-        elif tile_data: st.session_state.win_tile = tile_data[0]['code']
 
-# --- UI 渲染邏輯 ---
+# --- 5. UI 渲染主程式 ---
 def render_main_ui():
     if 'current_image' not in st.session_state:
-        return
-
-    st.image(st.session_state.current_plot, caption=f"AI 辨識結果 ({model_choice})", use_container_width=True)
-
-    all_codes = st.session_state.con_manual + st.session_state.exp_manual
-    st.markdown(f'<div class="section-header">🎴 牌面管理 <span class="count-badge">偵測總數：{len(all_codes)} 張</span></div>', unsafe_allow_html=True)
+        # 初始化 session state 以免報錯
+        if 'con_manual' not in st.session_state: st.session_state.con_manual = []
+        if 'exp_manual' not in st.session_state: st.session_state.exp_manual = []
     
-    with st.container():
-        st.markdown('<div class="win-tile-box">', unsafe_allow_html=True)
-        if 'win_tile' not in st.session_state:
-            st.session_state.win_tile = all_codes[0] if all_codes else '1w'
-            
-        win_info = TILE_INFO.get(st.session_state.win_tile, {'icon':'?', 'name':'未知'})
-        st.write(f"#### 目前胡牌張：{win_info['name']}")   
-        col1, col2 = st.columns([1, 1])
-        with col1: st.button(win_info['icon'], key="win_now", use_container_width=True)
-        with col2:
-            with st.popover("🔄 更改胡牌張"):
-                st.write("選擇新的胡牌張：")
-                all_keys = sorted([i for i in TILE_INFO.items() if i[1]['type'] != 'h'], key=lambda x: x[1]['w'])
-                grid = st.columns(4)
-                for idx, (k, v) in enumerate(all_keys):
-                    with grid[idx % 4]:
-                        if st.button(v['icon'], key=f"sw_{k}"):
-                            st.session_state.win_tile = k; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 顯示 AI 辨識圖片
+    if 'current_plot' in st.session_state:
+        st.image(st.session_state.current_plot, caption=f"AI 辨識結果", use_container_width=True)
 
-    st.write(f"**🐹 手牌：**")
+    # --- 牌面管理區域 (保留你想要的功能) ---
+    all_codes = st.session_state.con_manual + st.session_state.exp_manual
+    st.markdown(f'<div class="section-header">🎴 牌面管理 <span class="count-badge">總張數：{len(all_codes)}</span></div>', unsafe_allow_html=True)
+    
+    # 1. 手牌區
+    st.write(f"**🐹 手牌 (Concealed)：**")
     codes = st.session_state.con_manual
+    # 排序
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
-    cols = st.columns(11)
+    cols = st.columns(11) # 一行顯示多張
     for i, idx in enumerate(s_idx):
         with cols[i % 11]:
+            # 點擊刪除
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"h_{i}"):
                 st.session_state.con_manual.pop(idx); st.rerun()
+    
+    # 新增手牌按鈕
     with st.popover(f"➕ 新增手牌"):
-        p_c = st.columns(8); all_keys = sorted(TILE_INFO.items(), key=lambda x: x[1]['w'])
-        for k, v in all_keys:
-            if st.button(v['icon'], key=f"add_h_{k}"):
-                st.session_state.con_manual.append(k); st.rerun()
+        st.write("點擊圖示加入：")
+        all_keys = sorted(TILE_INFO.items(), key=lambda x: x[1]['w'])
+        cols_add = st.columns(8)
+        for idx, (k, v) in enumerate(all_keys):
+            with cols_add[idx % 8]:
+                if st.button(v['icon'], key=f"add_h_{k}"):
+                    st.session_state.con_manual.append(k); st.rerun()
 
+    # 交換按鈕
     st.markdown('<div class="swap-btn-container">', unsafe_allow_html=True)
-    if st.button("🔃 交換手牌與門前牌", help="點擊互換上下兩區的牌"):
+    if st.button("🔃 交換手牌 與 門前牌", help="AI 分錯排時使用"):
         st.session_state.con_manual, st.session_state.exp_manual = st.session_state.exp_manual, st.session_state.con_manual
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.write(f"**🐥 門前牌：**")
+    # 2. 門前牌區
+    st.write(f"**🐥 門前牌 (Exposed)：**")
     codes = st.session_state.exp_manual
     s_idx = sorted(range(len(codes)), key=lambda k: TILE_INFO[codes[k]]['w'])
     cols = st.columns(11)
@@ -487,120 +320,75 @@ def render_main_ui():
         with cols[i % 11]:
             if st.button(TILE_INFO[codes[idx]]['icon'], key=f"d_{i}"):
                 st.session_state.exp_manual.pop(idx); st.rerun()
+    
     with st.popover(f"➕ 新增門前"):
-        p_c = st.columns(8); all_keys = sorted(TILE_INFO.items(), key=lambda x: x[1]['w'])
-        for k, v in all_keys:
-            if st.button(v['icon'], key=f"add_d_{k}"):
-                st.session_state.exp_manual.append(k); st.rerun()
+        st.write("點擊圖示加入：")
+        all_keys = sorted(TILE_INFO.items(), key=lambda x: x[1]['w'])
+        cols_add = st.columns(8)
+        for idx, (k, v) in enumerate(all_keys):
+            with cols_add[idx % 8]:
+                if st.button(v['icon'], key=f"add_d_{k}"):
+                    st.session_state.exp_manual.append(k); st.rerun()
 
-    st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        base_t = st.number_input("底台數", min_value=0, value=3)
-        dealer = st.selectbox("誰是莊家", ["我", "下家(右)", "對家(對面)", "上家(左)"])
-        wind_r = st.selectbox("目前風圈", ["東", "南", "西", "北"])
-
-    with c2:
-        manual_opts = ["搶槓", "海底撈月", "河底撈魚", "槓上開花", "咪幾", "哩咕", "天地人胡"]
-        m_list = st.multiselect("手動加台：", manual_opts)
-        
-        force_zm = "海底撈月" in m_list or "槓上開花" in m_list
-        if force_zm:
-            st.info("💡 已選擇槓上/海底，系統自動設為自摸")
-            is_zm = True
-            win_on_dealer = False
-        else:
-            is_zm = st.checkbox("我是自摸", value=False)
-            if dealer != "我" and not is_zm:
-                win_on_dealer = st.checkbox("胡莊家 (莊家放槍)")
-            else:
-                win_on_dealer = False
-        
-        streak = 0
-        if dealer == "我":
-            streak = st.number_input("我的連莊次數", min_value=0, value=0)
-        elif win_on_dealer:
-            streak = st.number_input("對方連莊次數", min_value=0, value=0)
-
-    hu_ok, res_tai, details, wind_info = run_full_logic(
-        st.session_state.con_manual, st.session_state.exp_manual, st.session_state.win_tile, 
-        streak, dealer, is_zm, win_on_dealer, flower_mode, dice_val, m_list, base_t, wind_r
-    )
+    # --- 分析結果區域 ---
+    st.markdown("---")
     
-    # === 修正：根據是否相公、聽牌，決定顯示樣式與內容 ===
-    if res_tai == "相公":
-        bg, txt = "#f8d7da", "#721c24"
-        html_content = f'''
-        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-                <div class="result-label">🏆️預估台數</div>
-            </div>
-            <div style="margin-top: 10px;">
-                <span class="tai-number">相公👻</span>
-            </div>
-        </div>
-        '''
-    elif res_tai == "聽牌":
-        bg, txt = "#cce5ff", "#004085"
-        html_content = f'''
-        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-                <div class="result-label">👀 聽牌分析</div>
-            </div>
-            <div style="margin-top: 10px;">
-                <span class="tai-number" style="font-size: 2.8rem;">聽牌中！🎯</span>
-            </div>
-        </div>
-        '''
-    elif res_tai == "未聽牌":
-        bg, txt = "#fff3cd", "#856404"
-        html_content = f'''
-        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-                <div class="result-label">👀 聽牌分析</div>
-            </div>
-            <div style="margin-top: 10px;">
-                <span class="tai-number" style="font-size: 2.8rem;">尚未聽牌🧩</span>
-            </div>
-        </div>
-        '''
-    else:
-        bg, txt = "#d4edda", "#155724"
-        html_content = f'''
-        <div style="background-color:{bg}; color:{txt}; padding:20px; border-radius:12px; text-align:center;">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-                <div class="result-label">🏆️預估台數</div>
-            </div>
-            <div style="display: flex; justify-content: center; align-items: baseline; margin-top: 10px;">
-                <span class="tai-number">{res_tai}</span>
-                <span class="tai-text">台</span>
-            </div>
-        </div>
-        '''
-
-    # 使用無縮排的 HTML 字串，解決白框問題
-    st.markdown(html_content, unsafe_allow_html=True)
+    # 執行分析
+    status, title, data = analyze_waiting_status(st.session_state.con_manual, st.session_state.exp_manual)
     
-    col_re_1, col_re_2 = st.columns([4, 1])
-    with col_re_2:
-        if st.button("🔄 重新計算", key="refresh_btn", help="依照目前設定重新計算台數"):
-            st.rerun()
+    if status == "waiting":
+        bg_color, text_color = "#cce5ff", "#004085" # 藍色系
+        icon_html = ""
+        for tile_code in data:
+            icon_html += f'''
+            <div class="waiting-tile">
+                <div>{TILE_INFO[tile_code]['icon']}</div>
+                <div class="waiting-name">{TILE_INFO[tile_code]['name']}</div>
+            </div>
+            '''
+            
+        st.markdown(f'''
+        <div class="result-box" style="background-color: {bg_color}; color: {text_color};">
+            <div class="result-title">👀 聽牌分析</div>
+            <div class="result-content">🔥 {title}</div>
+            <div style="margin-top: 10px; font-size: 20px;">這手牌聽以下這些牌：</div>
+            <div class="waiting-tiles-container">
+                {icon_html}
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+    elif status == "not_waiting":
+        bg_color, text_color = "#fff3cd", "#856404" # 黃色系
+        st.markdown(f'''
+        <div class="result-box" style="background-color: {bg_color}; color: {text_color};">
+            <div class="result-title">👀 聽牌分析</div>
+            <div class="result-content">{title} 🧩</div>
+            <div class="hint-msg">再加把勁！調整手牌組合看看。</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+    else: # Error (相公)
+        bg_color, text_color = "#f8d7da", "#721c24" # 紅色系
+        st.markdown(f'''
+        <div class="result-box" style="background-color: {bg_color}; color: {text_color};">
+            <div class="result-title">⚠️ 牌型異常</div>
+            <div class="error-msg">相公 👻</div>
+            <div class="hint-msg">{title}</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
-    if wind_info:
-        st.markdown(f'<div class="wind-info">{wind_info}</div>', unsafe_allow_html=True)
+    # 重新整理按鈕
+    if st.button("🔄 重新分析", key="refresh_all", use_container_width=True):
+        st.rerun()
 
-    for d in details: st.write(f"📌 {d}")
-
-# --- 啟動 ---
+# --- 啟動入口 ---
 t1, t2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
 with t1:
     cam = st.camera_input("拍照")
-    if cam:
-        process_detection(Image.open(cam), 'camera', model_choice)
-
+    if cam: process_detection(Image.open(cam), 'camera', model_choice)
 with t2:
     up = st.file_uploader("選照片", type=['png', 'jpg', 'jpeg'])
-    if up:
-        process_detection(Image.open(up), 'upload', model_choice)
+    if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
