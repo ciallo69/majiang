@@ -65,15 +65,27 @@ st.markdown("""
         .error-msg { font-size: 28px; font-weight: bold; color: #721c24; }
         .hint-msg { font-size: 20px; color: #666; margin-top: 10px; }
 
-        /* === 4. 左下角圖片專屬樣式 === */
+        /* === 4. 第一張圖片：左下角專屬樣式 === */
         .bottom-left-img {
-            position: fixed;  /* 固定在畫面上 */
-            bottom: 20px;     /* 距離底部 20px */
-            left: 20px;       /* 距離左邊 20px */
-            width: 150px;     /* 圖片寬度 */
-            opacity: 0.85;    /* 稍微透明一點 */
-            z-index: 999;     /* 確保不會被其他東西蓋住 */
-            pointer-events: none; /* 滑鼠可以穿透圖片，不會擋住按鈕 */
+            position: fixed;  
+            bottom: 20px;     
+            left: 20px;       /* 如果想閃過側邊欄可以改大，例如 350px，這裡維持最左邊 */
+            width: 150px;     
+            opacity: 0.85;    
+            z-index: 0;       /* 設為 0，這樣側邊欄展開時就會自然把它擋住 */
+            pointer-events: none; 
+        }
+
+        /* === 5. 第二張圖片：左側【正中間】專屬樣式 === */
+        .left-middle-img {
+            position: fixed;  
+            top: 50%;         /* 距離頂部 50%，達成垂直置中 */
+            left: 20px;       /* 緊貼左側 */
+            transform: translateY(-50%); /* 確保是圖片中心點對齊螢幕正中間 */
+            width: 180px;     /* 可自行調整第二張圖片的大小 */
+            opacity: 0.85;    
+            z-index: 0;       /* 設為 0，側邊欄展開時就會擋住它 */
+            pointer-events: none; 
         }
     </style>
 """, unsafe_allow_html=True)
@@ -209,7 +221,6 @@ def process_detection(image_obj, source_type, current_model_name):
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
         
-        # ★ 如果只有一排，切分線設為 -1，讓所有牌預設進入「手牌」區
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else -1
         
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
@@ -332,17 +343,25 @@ with t2:
 render_main_ui()
 
 # ==========================================
-# 顯示左下角浮動圖片 (防錯機制版)
+# 渲染背景浮動圖片區 (利用 base64 讀取)
 # ==========================================
-image_filename = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
 
-# 檢查檔案是否存在，避免程式當機
-if os.path.exists(image_filename):
+# 1. 處理第一張圖片 (左下角)
+img1_name = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+if os.path.exists(img1_name):
     try:
-        img_base64 = get_base64_of_bin_file(image_filename)
         st.markdown(
-            f'<img src="data:image/png;base64,{img_base64}" class="bottom-left-img">', 
+            f'<img src="data:image/png;base64,{get_base64_of_bin_file(img1_name)}" class="bottom-left-img">', 
             unsafe_allow_html=True
         )
-    except Exception as e:
-        st.write(f"無法載入圖片: {e}")
+    except: pass
+
+# 2. 處理第二張圖片 (左側正中間)
+img2_name = "GQBeUMdaQAAZ6VP.png"
+if os.path.exists(img2_name):
+    try:
+        st.markdown(
+            f'<img src="data:image/png;base64,{get_base64_of_bin_file(img2_name)}" class="left-middle-img">', 
+            unsafe_allow_html=True
+        )
+    except: pass
