@@ -334,26 +334,16 @@ render_main_ui()
 # ==========================================
 # 顯示左下角浮動圖片 (防錯機制版)
 # ==========================================
-image_filename = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+your_image_url = "https://raw.githubusercontent.com/你的帳號/你的儲存庫/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
 
-# 1. 嘗試從本地讀取 (GitHub 同層資料夾)
-if os.path.exists(image_filename):
-    try:
-        img_base64 = get_base64_of_bin_file(image_filename)
-        st.markdown(
-            f'<img src="data:image/png;base64,{img_base64}" class="bottom-left-img">', 
-            unsafe_allow_html=True
-        )
-    except Exception as e:
-        # 如果本地讀取失敗，顯示錯誤訊息（測試用，成功後可移除）
-        st.sidebar.error(f"本地圖片讀取失敗: {e}")
-else:
-    # 2. 如果本地檔案找不到，嘗試直接從您的 GitHub Raw 連結讀取 (這是最穩定的備案)
-    # 請把下方網址換成您 GitHub 圖片的真正 Raw 連結
-    github_raw_url = "https://raw.githubusercontent.com/ciallo69/majiang/refs/heads/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
-    st.markdown(
-        f'<img src="{github_raw_url}" class="bottom-left-img" onerror="this.style.display=\'none\'">', 
-        unsafe_allow_html=True
-    )
+st.markdown(
+    f"""
+    <div style="position: fixed; bottom: 10px; left: 10px; z-index: 9999;">
+        <img src="{your_image_url}" width="150" style="opacity: 0.9;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 
