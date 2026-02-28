@@ -336,7 +336,7 @@ render_main_ui()
 # ==========================================
 image_filename = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
 
-# 檢查檔案是否存在，避免程式當機
+# 1. 嘗試從本地讀取 (GitHub 同層資料夾)
 if os.path.exists(image_filename):
     try:
         img_base64 = get_base64_of_bin_file(image_filename)
@@ -345,4 +345,14 @@ if os.path.exists(image_filename):
             unsafe_allow_html=True
         )
     except Exception as e:
-        st.write(f"無法載入圖片: {e}")
+        # 如果本地讀取失敗，顯示錯誤訊息（測試用，成功後可移除）
+        st.sidebar.error(f"本地圖片讀取失敗: {e}")
+else:
+    # 2. 如果本地檔案找不到，嘗試直接從您的 GitHub Raw 連結讀取 (這是最穩定的備案)
+    # 請把下方網址換成您 GitHub 圖片的真正 Raw 連結
+    github_raw_url = "https://raw.githubusercontent.com/您的帳號/您的儲存庫名稱/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+    st.markdown(
+        f'<img src="{github_raw_url}" class="bottom-left-img" onerror="this.style.display=\'none\'">', 
+        unsafe_allow_html=True
+    )
+
