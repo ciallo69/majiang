@@ -77,7 +77,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-
+st.image("https://raw.githubusercontent.com/ciallo69/majiang/refs/heads/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png", width=200)
 st.title("🀄️ 麻將聽牌小幫手")
 
 # --- 1. 設定與定義 ---
@@ -330,20 +330,3 @@ with t2:
     if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
-
-# ==========================================
-# 顯示左下角浮動圖片 (防錯機制版)
-# ==========================================
-your_image_url = "https://raw.githubusercontent.com/你的帳號/你的儲存庫/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
-
-st.markdown(
-    f"""
-    <div style="position: fixed; bottom: 10px; left: 10px; z-index: 9999;">
-        <img src="{your_image_url}" width="150" style="opacity: 0.9;">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-
