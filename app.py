@@ -4,12 +4,12 @@ from PIL import Image
 import collections
 import numpy as np
 import base64
+import os
 
 # --- 0. 介面設定 ---
 st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
 
 # --- 輔助函數：讀取本地圖片並轉為 base64 ---
-# 如果你是用網址，這個函數可以省略
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -17,7 +17,7 @@ def get_base64_of_bin_file(bin_file):
 
 st.markdown("""
     <style>
-        /* === 1. 你最愛的原版麻將牌樣式 (一字不漏完全還原) === */
+        /* === 1. 原版麻將牌樣式 === */
         .stButton > button {
             border: 2px solid #333 !important; 
             background-color: white !important;
@@ -35,8 +35,7 @@ st.markdown("""
             font-family: "Segoe UI Emoji" !important; 
         }
 
-        /* === 2. 專屬特效藥：只針對 type="primary" 的按鈕進行縮小還原 === */
-        /* (這只會影響設定了 type="primary" 的「重新分析」與「交換」按鈕) */
+        /* === 2. 一般操作按鈕的縮小還原 === */
         .stButton > button[kind="primary"] {
             height: auto !important; 
             width: 100% !important;
@@ -66,13 +65,15 @@ st.markdown("""
         .error-msg { font-size: 28px; font-weight: bold; color: #721c24; }
         .hint-msg { font-size: 20px; color: #666; margin-top: 10px; }
 
-        /* === 4. 新增：左下角圖片樣式 === */
+        /* === 4. 左下角圖片專屬樣式 === */
         .bottom-left-img {
-            display: block;
-            margin-top: 50px; /* 與上方內容保持距離 */
-            margin-left: 0;   /* 靠左 */
-            width: 150px;    /* 調整圖片大小 */
-            opacity: 0.8;    /* 稍微透明一點點 */
+            position: fixed;  /* 固定在畫面上 */
+            bottom: 20px;     /* 距離底部 20px */
+            left: 20px;       /* 距離左邊 20px */
+            width: 150px;     /* 圖片寬度 */
+            opacity: 0.85;    /* 稍微透明一點 */
+            z-index: 999;     /* 確保不會被其他東西蓋住 */
+            pointer-events: none; /* 滑鼠可以穿透圖片，不會擋住按鈕 */
         }
     </style>
 """, unsafe_allow_html=True)
@@ -208,6 +209,7 @@ def process_detection(image_obj, source_type, current_model_name):
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
         
+        # ★ 如果只有一排，切分線設為 -1，讓所有牌預設進入「手牌」區
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else -1
         
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
@@ -317,11 +319,6 @@ def render_main_ui():
     st.write("")
     if st.button("🔄 重新分析", key="refresh_all", use_container_width=True, type="primary"):
         st.rerun()
-        
-    # --- 顯示左下角圖片 ---
-    # 這裡放你要顯示的圖片的 base64 或 URL
-    # 如果你是把圖放在同資料夾，就取消下面的註解，並把檔名改成你的圖
-    # st.markdown(f'<img src="data:image/png;base64,{get_base64_of_bin_file("your_image.png")}" class="bottom-left-img">', unsafe_allow_html=True)
 
 # --- 啟動入口 ---
 t1, t2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
@@ -333,3 +330,19 @@ with t2:
     if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
+
+# ==========================================
+# 顯示左下角浮動圖片 (防錯機制版)
+# ==========================================
+image_filename = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+
+# 檢查檔案是否存在，避免程式當機
+if os.path.exists(image_filename):
+    try:
+        img_base64 = get_base64_of_bin_file(image_filename)
+        st.markdown(
+            f'<img src="data:image/png;base64,{img_base64}" class="bottom-left-img">', 
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        st.write(f"無法載入圖片: {e}")
