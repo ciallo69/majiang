@@ -350,9 +350,10 @@ if os.path.exists(image_filename):
 else:
     # 2. 如果本地檔案找不到，嘗試直接從您的 GitHub Raw 連結讀取 (這是最穩定的備案)
     # 請把下方網址換成您 GitHub 圖片的真正 Raw 連結
-    github_raw_url = "https://raw.githubusercontent.com/您的帳號/您的儲存庫名稱/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+    github_raw_url = "https://raw.githubusercontent.com/ciallo69/majiang/refs/heads/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
     st.markdown(
         f'<img src="{github_raw_url}" class="bottom-left-img" onerror="this.style.display=\'none\'">', 
         unsafe_allow_html=True
     )
+
 
