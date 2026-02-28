@@ -69,22 +69,23 @@ st.markdown("""
         .bottom-left-img {
             position: fixed;  
             bottom: 20px;     
-            left: 20px;       /* 如果想閃過側邊欄可以改大，例如 350px，這裡維持最左邊 */
-            width: 150px;     
+            left: 20px;       
+            /* ★ 這裡已經幫您從 150px 改成 180px，與上面那張一樣大 ★ */
+            width: 180px;     
             opacity: 0.85;    
-            z-index: 0;       /* 設為 0，這樣側邊欄展開時就會自然把它擋住 */
+            z-index: 0;       
             pointer-events: none; 
         }
 
         /* === 5. 第二張圖片：左側【正中間】專屬樣式 === */
         .left-middle-img {
             position: fixed;  
-            top: 50%;         /* 距離頂部 50%，達成垂直置中 */
-            left: 20px;       /* 緊貼左側 */
-            transform: translateY(-50%); /* 確保是圖片中心點對齊螢幕正中間 */
-            width: 180px;     /* 可自行調整第二張圖片的大小 */
+            top: 50%;         
+            left: 20px;       
+            transform: translateY(-50%); 
+            width: 180px;     /* 這張原本就是 180px */
             opacity: 0.85;    
-            z-index: 0;       /* 設為 0，側邊欄展開時就會擋住它 */
+            z-index: 0;       
             pointer-events: none; 
         }
     </style>
@@ -221,6 +222,7 @@ def process_detection(image_obj, source_type, current_model_name):
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
         
+        # ★ 如果只有一排，切分線設為 -1，讓所有牌預設進入「手牌」區
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else -1
         
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
