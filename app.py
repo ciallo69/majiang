@@ -3,9 +3,17 @@ from ultralytics import YOLO
 from PIL import Image
 import collections
 import numpy as np
+import base64
 
 # --- 0. 介面設定 ---
 st.set_page_config(page_title="AI 麻將聽牌小幫手", layout="centered")
+
+# --- 輔助函數：讀取本地圖片並轉為 base64 ---
+# 如果你是用網址，這個函數可以省略
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
 st.markdown("""
     <style>
@@ -57,6 +65,15 @@ st.markdown("""
         
         .error-msg { font-size: 28px; font-weight: bold; color: #721c24; }
         .hint-msg { font-size: 20px; color: #666; margin-top: 10px; }
+
+        /* === 4. 新增：左下角圖片樣式 === */
+        .bottom-left-img {
+            display: block;
+            margin-top: 50px; /* 與上方內容保持距離 */
+            margin-left: 0;   /* 靠左 */
+            width: 150px;    /* 調整圖片大小 */
+            opacity: 0.8;    /* 稍微透明一點點 */
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -191,7 +208,6 @@ def process_detection(image_obj, source_type, current_model_name):
         gaps = np.diff([d['y'] for d in sorted_y])
         max_idx = np.argmax(gaps) if len(gaps) > 0 else -1
         
-        # ★ 修改處：如果只有一排，切分線設為 -1，讓所有牌預設進入「手牌」區
         threshold = (sorted_y[max_idx]['y'] + sorted_y[max_idx+1]['y'])/2 if (max_idx != -1 and gaps[max_idx] > 40) else -1
         
         st.session_state.con_manual = [d['code'] for d in tile_data if d['y'] >= threshold]
@@ -301,6 +317,11 @@ def render_main_ui():
     st.write("")
     if st.button("🔄 重新分析", key="refresh_all", use_container_width=True, type="primary"):
         st.rerun()
+        
+    # --- 顯示左下角圖片 ---
+    # 這裡放你要顯示的圖片的 base64 或 URL
+    # 如果你是把圖放在同資料夾，就取消下面的註解，並把檔名改成你的圖
+    # st.markdown(f'<img src="data:image/png;base64,{get_base64_of_bin_file("your_image.png")}" class="bottom-left-img">', unsafe_allow_html=True)
 
 # --- 啟動入口 ---
 t1, t2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
