@@ -77,7 +77,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-st.image("https://raw.githubusercontent.com/ciallo69/majiang/refs/heads/main/dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png", width=200)
+
 st.title("🀄️ 麻將聽牌小幫手")
 
 # --- 1. 設定與定義 ---
@@ -330,3 +330,19 @@ with t2:
     if up: process_detection(Image.open(up), 'upload', model_choice)
 
 render_main_ui()
+
+# ==========================================
+# 顯示左下角浮動圖片 (防錯機制版)
+# ==========================================
+image_filename = "dhypkn3-59ccfd77-ff40-44ce-a755-b7c4af7a1f76.png"
+
+# 檢查檔案是否存在，避免程式當機
+if os.path.exists(image_filename):
+    try:
+        img_base64 = get_base64_of_bin_file(image_filename)
+        st.markdown(
+            f'<img src="data:image/png;base64,{img_base64}" class="bottom-left-img">', 
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        st.write(f"無法載入圖片: {e}")
