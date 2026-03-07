@@ -6,8 +6,7 @@ import numpy as np
 import base64
 import os
 
-
-# --- 0. 介面與 CSS 樣式設定 (精確對齊您指定的紫色風格) ---
+# --- 0. 介面與 CSS 樣式設定 ---
 st.set_page_config(page_title="AI麻將算台平台", layout="centered")
 
 st.markdown("""
@@ -37,14 +36,17 @@ st.title("🀄️🀅 🀆 麻將自動算台 ")
 st.sidebar.title("⚙️ 核心設定")
 model_choice = st.sidebar.selectbox("選擇辨識模型", ("yolov8s(2).pt", "yolov8n(2).pt", "YOLOv8s_obb.pt", "YOLOv8n_obb.pt"))
 
-# 🌟 新增：底台設定框
 base_tai_input = st.sidebar.number_input("設定底台", min_value=0, step=1, value=0, help="設定胡牌的基本底台數")
 
 @st.cache_resource
 def load_yolo_model(name):
     return YOLO(name)
 
-model = load_yolo_model(model_choice)
+# 若沒有模型檔案，這裡會報錯。確保模型檔案在同一個資料夾下！
+try:
+    model = load_yolo_model(model_choice)
+except Exception as e:
+    st.error(f"載入模型失敗，請確認模型檔案是否存在：{e}")
 
 # --- 2. 牌名對照表 ---
 TILE_INFO = {
@@ -102,11 +104,9 @@ def can_hu(codes):
             if is_decomposable(temp, 5): return True, "胡牌成功"
     return False, "結構不符合胡牌型 (有孤牌)，判定為相公"
 
-# 🌟 新增：傳入 base_tai 參數進行計算
 def calculate_tai_system(codes, is_z, streak, m_list, base_tai):
     tai, reason = 0, []
     
-    # 加入底台
     if base_tai > 0:
         tai += base_tai
         reason.append(f"底台 {base_tai}台")
@@ -129,7 +129,6 @@ def calculate_tai_system(codes, is_z, streak, m_list, base_tai):
     for t, c in h_counts.items():
         if c >= 2:
             temp = h_counts.copy(); temp[t] -= 2
-            # 若剩餘牌皆為 3 或 4 的倍數，代表全由刻子/槓子組成
             if all(v in [0, 3, 4] for v in temp.values()):
                 tai += 4; reason.append("碰碰胡 4台")
                 break
@@ -158,6 +157,10 @@ def calculate_tai_system(codes, is_z, streak, m_list, base_tai):
 
 # --- 4. 辨識與結果呈現 ---
 def run_detection(img):
+    if img is None:
+        st.warning("⚠️ 請上傳照片或修正牌面。")
+        return
+        
     results = model(img)
     ai_raw = []
     for r in results:
@@ -186,7 +189,6 @@ def run_detection(img):
         hand_c = [c for c in sorted_codes if TILE_INFO[c]['type'] != 'h']
         num_h, num_all = len(hand_c), len(sorted_codes)
 
-        # 📊 統計看板
         st.info(f"📊 **統計：共偵測到 {num_all} 張牌** (手牌: {num_h}, 花牌: {num_all - num_h})")
         h_counts = collections.Counter(hand_c)
         over = [TILE_INFO[k]['name'] for k, v in h_counts.items() if v > 4]
@@ -208,21 +210,16 @@ def run_detection(img):
             st.write("**🃏 可能台數(自選)**")
             m_list = st.multiselect("勾選額外台數：", ["自摸", "中洞", "邊張", "單調", "門清", "門清一摸三", "搶槓", "槓上開花+自摸", "海底撈月+自摸", "河底撈魚", "全求人(含單調)", "平胡", "三暗刻", "四暗刻", "五暗刻", "咪幾", "哩咕"])
 
-        # --- 🛡️ 總台數看板邏輯 ---
         is_hu, msg = can_hu(sorted_codes) if not over else (False, "防呆未通過")
         
         if  is_hu:
-            # 傳入側邊欄底台參數
             t_tai, details = calculate_tai_system(sorted_codes, is_z, s_c, m_list, base_tai_input) if 17 <= num_h <= 22 else (0, [f"未胡牌原因：{msg}"])
-            
-            # 🌟 若台數僅含底台，顯示無特殊牌型
             if is_hu and t_tai == base_tai_input:
                 details.append("無特殊牌型")
-                
-            bg_card, txt_card = "#d4edda", "#155724" # 綠色
+            bg_card, txt_card = "#d4edda", "#155724"
         else:
             t_tai, details = 0, ["目前張數不符胡牌規則(相公)"]
-            bg_card, txt_card = "#f8d7da", "#721c24" # 紅色
+            bg_card, txt_card = "#f8d7da", "#721c24"
 
         st.markdown(f"""<div style="background-color:{bg_card}; color:{txt_card}; padding:20px; border-radius:10px; text-align:center; border:1px solid {txt_card}; margin:20px 0;">
             <p style="margin:0; font-size:18px; font-weight:bold;">🏆️預估總台數</p>
@@ -231,7 +228,6 @@ def run_detection(img):
         st.write("**台數明細：**")
         for d in details: st.write(f"📌 {d}")
         st.info("💡 提示：本系統以您的修正與手動更改為最終判定標準。")
-    else: st.warning("⚠️ 請上傳照片或修正牌面。")
 
 # --- UI 分頁 ---
 tab1, tab2 = st.tabs(["📷︎ 即時拍照", "📁 上傳照片"])
@@ -241,4 +237,3 @@ with tab1:
 with tab2:
     up = st.file_uploader("選擇照片", type=['png', 'jpg', 'jpeg'])
     if up: run_detection(Image.open(up))
-
