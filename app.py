@@ -2,6 +2,10 @@ import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
 import collections
+import numpy as np
+import base64
+import os
+
 
 # --- 0. 介面與 CSS 樣式設定 (精確對齊您指定的紫色風格) ---
 st.set_page_config(page_title="AI麻將算台平台", layout="centered")
@@ -237,3 +241,4 @@ with tab1:
 with tab2:
     up = st.file_uploader("選擇照片", type=['png', 'jpg', 'jpeg'])
     if up: run_detection(Image.open(up))
+
